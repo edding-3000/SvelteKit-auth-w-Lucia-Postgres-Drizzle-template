@@ -2,12 +2,12 @@
 
 This is a Svelte 5 project with Lucia auth [Email and password with 2FA](https://lucia-auth.com/examples/email-password-2fa) already implemented, ready to use and extend.
 
-The files within `routes/lucia/signup` have been modified with another password called 'registery password' field, so that only users who know this password can register. The password is stored as an encrypted variable in the env file (possibly not secure). 
-If this is not what you want or need, small parts of the code in `+page.server.ts` and `+page.svelte` must be removed.
+The files within [`routes/lucia/signup`](src/routes/lucia/signup) have been modified with another password called 'registery password' field, so that only users who know this password can register. The password is stored as an encrypted variable in the env file (possibly not secure). 
+If this is not what you want or need, small parts of the code in [`+page.server.ts`](src/routes/lucia/signup/+page.server.ts) and [`+page.svelte`](src/routes/lucia/signup/+page.svelte) must be removed.
 
 I simply followed lucia auth's instructions. I'm definitely not an expert on authorization or anything like that. I just thought it might make life easier for some people.
 
-Also there is a small type issue in `/routs/lucia/signup/+page.svelte`, not sure if its a local problem.
+Also there is a small type issue in [`/routs/lucia/signup/+page.svelte`](src/routs/lucia/signup/+page.svelte), not sure if its a local problem.
 
 ## Creating a project :clipboard:
 
