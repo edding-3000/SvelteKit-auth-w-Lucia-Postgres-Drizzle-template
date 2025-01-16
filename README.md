@@ -1,4 +1,4 @@
-# Svelte 5 with [Lucia auth](https://lucia-auth.com), postgres and [drizzle](https://orm.drizzle.team) setup in typeScipt :revolving_hearts:
+# Svelte 5 with [Lucia auth](https://lucia-auth.com), postgres and [Drizzle](https://orm.drizzle.team) setup as template project in typeScipt :revolving_hearts:
 
 This is a Svelte 5 project with Lucia auth [Email and password with 2FA](https://lucia-auth.com/examples/email-password-2fa) already implemented, ready to use and extend.
 
@@ -11,11 +11,11 @@ I simply followed lucia auth's instructions. I'm definitely not an expert on aut
 
 U need to setup ur postgres database.
 
-### lucia :smiling_imp:
+### Lucia :smiling_imp:
 - Run `npm run db:push` to update your database schema
 - Visit /demo/lucia route to view the demo
 
-### drizzle :sweat_drops:
+### Drizzle :sweat_drops:
 - You will need to set DATABASE_URL in your production environment
 - Run `npm run db:push` to update your database schema
 
