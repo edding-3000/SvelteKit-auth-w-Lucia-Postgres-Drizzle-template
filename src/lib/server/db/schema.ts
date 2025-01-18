@@ -1,4 +1,5 @@
-import { pgTable, serial, text, integer, timestamp, boolean, customType } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, integer, timestamp, boolean, customType, uniqueIndex } from 'drizzle-orm/pg-core';
+import { SQL, sql } from 'drizzle-orm';
 
 const bytea = customType<{
 	data: Buffer
@@ -10,46 +11,75 @@ const bytea = customType<{
 })
 
 export const user = pgTable('user', {
-	id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
-	age: integer('age'),
-	email: text('email').notNull(),
-	emailVerified: boolean('email_verified').default(false).notNull(),
+	id: serial('id').primaryKey().notNull(),
+	email: text('email').notNull().unique(),
 	username: text('username').notNull().unique(),
 	passwordHash: text('password_hash').notNull(),
-	registered2FA: boolean('registered2FA').default(false).notNull(),
+	emailVerified: boolean('email_verified').default(false).notNull(),
 	recoveryCode: bytea('recovery_code').notNull(),
-	totpKey: bytea('totp_key')
-});
+},
+	(table) => ({
+		emailUniqueIndex: uniqueIndex('email_index').on(sql`lower(${table.email})`),
+	}),
+);
 
 export const session = pgTable('session', {
-	id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+	id: text('id').primaryKey().notNull(),
 	userId: integer('user_id')
 		.notNull()
 		.references(() => user.id),
 	expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'date' }).notNull(),
-	twoFactorVerified: boolean('two_factor_verified').default(false).notNull().references(() => user.registered2FA)
+	twoFactorVerified: boolean('two_factor_verified').default(false).notNull(),
 });
 
 export const emailVerificationRequest = pgTable('email_verification_request', {
-	id: text('id').notNull(),
+	id: text('id').primaryKey().notNull(),
 	userId: integer('user_id')
 		.notNull()
 		.references(() => user.id),
 	email: text('email').notNull().references(() => user.email),
+	code: text('code').notNull(),
 	expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'date' }).notNull(),
-	code: text('code').notNull()
 });
 
 export const passwordResetSession = pgTable('password_reset_session', {
-	id: text('id').notNull(),
+	id: text('id').primaryKey().notNull(),
 	userId: integer('user_id')
 		.notNull()
 		.references(() => user.id),
 	email: text('email').notNull().references(() => user.email),
+	code: text('code').notNull(),
 	expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'date' }).notNull(),
-	emailVerified: boolean('email_verified').notNull().references(() => user.emailVerified),
-	twoFactorVerified: boolean('two_factor_verified').notNull().references(() => user.registered2FA),
-	code: text('code').notNull()
+	emailVerified: boolean('email_verified').default(false).notNull(),
+	twoFactorVerified: boolean('two_factor_verified').default(false).notNull(),
+});
+
+export const totpCredential = pgTable('totp_credential', {
+	id: serial('id').primaryKey().notNull(),
+	userId: integer('user_id')
+		.notNull()
+		.references(() => user.id),
+	key: bytea('key').notNull(),
+});
+
+export const passkeyCredential = pgTable('passkey_credential', {
+	id: bytea('id').primaryKey().notNull(),
+	userId: integer('user_id')
+		.notNull()
+		.references(() => user.id),
+	name: text('name').notNull(),
+	algorithm: integer('algorithm').notNull(),
+	publicKey: bytea('public_key').notNull(),
+});
+
+export const securityKeyCredential = pgTable('security_key_credential', {
+	id: bytea('id').primaryKey().notNull(),
+	userId: integer('user_id')
+		.notNull()
+		.references(() => user.id),
+	name: text('name').notNull(),
+	algorithm: integer('algorithm').notNull(),
+	publicKey: bytea('public_key').notNull(),
 });
 
 export type PasswordResetSession = typeof passwordResetSession.$inferSelect;
@@ -59,3 +89,9 @@ export type EmailVerificationRequest = typeof emailVerificationRequest.$inferSel
 export type Session = typeof session.$inferSelect;
 
 export type User = typeof user.$inferSelect;
+
+export type TotpCredential = typeof totpCredential.$inferSelect;
+
+export type PasskeyCredential = typeof passkeyCredential.$inferSelect;
+
+export type SecurityKeyCredential = typeof securityKeyCredential.$inferSelect;

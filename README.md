@@ -1,17 +1,28 @@
-# Svelte 5 with [Lucia auth](https://lucia-auth.com), postgres and [Drizzle](https://orm.drizzle.team) setup as template project in TypeScipt :revolving_hearts:
+# SvelteKit with [Lucia auth](https://lucia-auth.com), postgres and [Drizzle](https://orm.drizzle.team) setup as template project in TypeScipt :revolving_hearts:
 
-This is a Svelte 5 project with Lucia auth [Email and password with 2FA](https://lucia-auth.com/examples/email-password-2fa) already implemented, ready to use and extend.
+This is a SvelteKit template project with Lucia auth [Email and password example with 2FA and WebAuthn](https://lucia-auth.com/examples/email-password-2fa-webauthn) already implemented, ready to use and extend.
 
-The files within [`routes/lucia/signup`](src/routes/lucia/signup) have been modified with another password called 'registery password' field, so that only users who know this password can register. The password is stored as an encrypted variable in the env file (possibly not secure). 
-If this is not what you want or need, small parts of the code in [`+page.server.ts`](src/routes/lucia/signup/+page.server.ts) and [`+page.svelte`](src/routes/lucia/signup/+page.svelte) must be removed.
+It uses [`nodemailer`](https://www.nodemailer.com) for sending emails.
+
+The files within [`routes/(lucia)/signup`](src/routes/(lucia)/signup) have been modified with another password called 'registery password' field, so that only users who know this password can register. The password is stored as an encrypted variable in the env file (possibly not secure). 
+If this is not what you want or need, small parts of the code in [`+page.server.ts`](src/routes/(lucia)/signup/+page.server.ts) and [`+page.svelte`](src/routes/(lucia)/signup/+page.svelte) must be removed.
 
 I simply followed lucia auth's instructions. I'm definitely not an expert on authorization or anything like that. I just thought it might make life easier for some people.
 
-Also there is a small type issue in [`/routs/lucia/signup/+page.svelte`](src/routs/lucia/signup/+page.svelte), not sure if its a local problem.
+## TODOs :clipboard:
 
-## Creating a project :clipboard:
+### env
 
-U need to setup ur postgres database.
+- Add an 'ORIGIN' variable to your env file that corresponds to the hostname (for example `"localgost"`).
+- Add an 'ORIGIN_URL' variable to your env file that corresponds to the host url (for example `"http://localhost:5173"`).
+
+### Setup SMTP for sending mails
+
+Setup your SMTP server in the [`transporter.ts`](src/lib/server/transporter.ts) file. You can use [Gmail](https://support.google.com/a/answer/176600). Insert your gmail as `GMAIL_EMAIL` and password as `GMAIL_PASSWORD` in your env file.
+
+Uncomment and fill in / rewrite the informations for the email-verification process in the [`email-verification.ts`](src/lib/server/email-verification.ts) file and password-reset process in the [`password-reset.ts`](src/lib/server/password-reset.ts) file.
+
+Next you need to setup your postgres database.
 
 ### Lucia :smiling_imp:
 - Run `npm run db:push` to update your database schema

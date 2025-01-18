@@ -3,6 +3,9 @@ import { db } from "./db";
 import { ExpiringTokenBucket } from "./rate-limit";
 import { encodeBase32 } from "@oslojs/encoding";
 import * as table from '$lib/server/db/schema';
+import nodemailer from "nodemailer";
+import { transporter } from "./transporter";
+import { GMAIL_EMAIL } from '$env/static/private'
 
 import type { RequestEvent } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
@@ -45,7 +48,16 @@ export async function deleteUserEmailVerificationRequest(userId: number): Promis
   await db.delete(table.emailVerificationRequest).where(eq(table.emailVerificationRequest.userId, userId))
 }
 
-export function sendVerificationEmail(email: string, code: string): void {
+export async function sendVerificationEmail(email: string, code: string): Promise<void> {
+  // const info = await transporter.sendMail({
+  //   from: `"Maddison Foo Koch 👻" <${GMAIL_EMAIL}>`, // sender address
+  //   to: email, // list of receivers
+  //   subject: "Your verification code for Coolection", // Subject line
+  //   text: `Your verification code is ${code}`, // plain text body
+  //   html: `<strong>Your verification code is ${code}</strong>`, // html body
+  // });
+
+  // console.log("Message sent: %s", info.messageId);
   console.log(`To ${email}: Your verification code is ${code}`);
 }
 

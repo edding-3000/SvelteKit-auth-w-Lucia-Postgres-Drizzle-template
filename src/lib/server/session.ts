@@ -1,5 +1,5 @@
 import type { RequestEvent } from '@sveltejs/kit';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { sha256 } from '@oslojs/crypto/sha2';
 import { encodeBase32LowerCaseNoPadding, encodeHexLowerCase } from '@oslojs/encoding';
 import { db } from '$lib/server/db';
@@ -12,13 +12,14 @@ export const sessionCookieName = 'auth-session';
 
 export function generateSessionToken() {
 	const bytes = crypto.getRandomValues(new Uint8Array(20));
-	const token = encodeBase32LowerCaseNoPadding(bytes).toLowerCase();
+	const token = encodeBase32LowerCaseNoPadding(bytes);
 	return token;
 }
 
 export async function createSession(token: string, userId: number, flags: SessionFlags) {
-	const sessionId = parseInt(encodeHexLowerCase(sha256(new TextEncoder().encode(token))), 16);
-	const session: table.Session = {
+	const sessionId = encodeHexLowerCase(sha256(new TextEncoder().encode(token)));
+	console.log("sessionId", sessionId);
+	const session: Session = {
 		id: sessionId,
 		userId,
 		expiresAt: new Date(Date.now() + DAY_IN_MS * 30),
@@ -29,21 +30,51 @@ export async function createSession(token: string, userId: number, flags: Sessio
 }
 
 export async function validateSessionToken(token: string): Promise<{ session: Session; user: User } | { session: null; user: null }> {
-	const sessionId = parseInt(encodeHexLowerCase(sha256(new TextEncoder().encode(token))));
-	const [result] = await db
+	const sessionId = encodeHexLowerCase(sha256(new TextEncoder().encode(token)));
+	const [row] = await db
 		.select({
 			// Adjust user table here to tweak returned data
-			user: { id: table.user.id, username: table.user.username, email: table.user.email, emailVerified: table.user.emailVerified, registered2FA: table.user.registered2FA },
+			user: {
+				id: table.user.id,
+				username: table.user.username,
+				email: table.user.email,
+				emailVerified: table.user.emailVerified,
+				hasTotpCredential: sql`CASE WHEN ${table.totpCredential.id} IS NOT NULL THEN true ELSE false END`,
+				hasPasskeyCredential: sql`CASE WHEN ${table.passkeyCredential.id} IS NOT NULL THEN true ELSE false END`,
+				hasSecurityKeyCredential: sql`CASE WHEN ${table.securityKeyCredential.id} IS NOT NULL THEN true ELSE false END`,
+			},
 			session: table.session
 		})
 		.from(table.session)
 		.innerJoin(table.user, eq(table.session.userId, table.user.id))
+		.leftJoin(table.totpCredential, eq(table.user.id, table.totpCredential.userId))
+		.leftJoin(table.passkeyCredential, eq(table.user.id, table.passkeyCredential.userId))
+		.leftJoin(table.securityKeyCredential, eq(table.user.id, table.securityKeyCredential.userId))
 		.where(eq(table.session.id, sessionId));
 
-	if (!result) {
+	if (!row) {
 		return { session: null, user: null };
 	}
-	const { session, user } = result;
+
+	const session: Session = {
+		id: row.session.id,
+		userId: row.session.userId,
+		expiresAt: row.session.expiresAt,
+		twoFactorVerified: row.session.twoFactorVerified
+	};
+	const user: User = {
+		id: row.user.id,
+		email: row.user.email,
+		username: row.user.username,
+		emailVerified: row.user.emailVerified,
+		registeredTOTP: row.user.hasTotpCredential as boolean,
+		registeredPasskey: row.user.hasPasskeyCredential as boolean,
+		registeredSecurityKey: row.user.hasSecurityKeyCredential as boolean,
+		registered2FA: false
+	};
+	if (user.registeredPasskey || user.registeredSecurityKey || user.registeredTOTP) {
+		user.registered2FA = true;
+	}
 
 	const sessionExpired = Date.now() >= session.expiresAt.getTime();
 	if (sessionExpired) {
@@ -65,7 +96,7 @@ export async function validateSessionToken(token: string): Promise<{ session: Se
 
 export type SessionValidationResult = Awaited<ReturnType<typeof validateSessionToken>>;
 
-export async function invalidateSession(sessionId: number) {
+export async function invalidateSession(sessionId: string) {
 	await db.delete(table.session).where(eq(table.session.id, sessionId));
 }
 
@@ -73,7 +104,7 @@ export async function invalidateUserSessions(userId: number) {
 	await db.delete(table.session).where(eq(table.session.userId, userId));
 }
 
-export async function setSessionAs2FAVerified(sessionId: number) {
+export async function setSessionAs2FAVerified(sessionId: string) {
 	await db.update(table.session).set({ twoFactorVerified: true }).where(eq(table.session.id, sessionId))
 }
 
@@ -102,7 +133,7 @@ export interface SessionFlags {
 }
 
 export interface Session extends SessionFlags {
-	id: number;
+	id: string;
 	expiresAt: Date;
 	userId: number;
 }

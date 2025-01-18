@@ -1,7 +1,7 @@
 import * as table from '$lib/server/db/schema';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { db } from "./db";
-import { decrypt, decryptToString, encrypt, encryptString } from "./encryption";
+import { decryptToString, encryptString } from "./encryption";
 import { generateRandomRecoveryCode } from "./utils";
 import { hashPassword } from './password';
 
@@ -13,6 +13,8 @@ export async function createUser(email: string, username: string, password: stri
   const passwordHash = await hashPassword(password);
   const recoveryCode = generateRandomRecoveryCode();
   const encryptedRecoveryCode = encryptString(recoveryCode);
+
+  console.log("encryptedRecoveryCode", encryptedRecoveryCode);
 
   const [row] = await db.insert(table.user)
     .values({ username, email, passwordHash, recoveryCode: Buffer.from(encryptedRecoveryCode) })
@@ -29,7 +31,10 @@ export async function createUser(email: string, username: string, password: stri
     email,
     username,
     emailVerified: false,
-    registered2FA: false,
+    registeredTOTP: false,
+    registeredPasskey: false,
+    registeredSecurityKey: false,
+    registered2FA: false
   };
 
   return user;
@@ -79,24 +84,8 @@ export async function getUserRecoverCode(userId: number): Promise<string> {
   return decryptToString(encrypted);
 }
 
-export async function getUserTOTPKey(userId: number): Promise<Uint8Array | null> {
-  const row = await db.select({ totpKey: table.user.totpKey }).from(table.user).where(eq(table.user.id, userId)).limit(1);
 
-  if (!row || row.length === 0) {
-    throw new Error("Invalid user ID");
-  }
-  const encryptedBuffer = row[0].totpKey;
-  if (encryptedBuffer === null) {
-    return null;
-  }
-  const encrypted = new Uint8Array(encryptedBuffer);
-  return decrypt(encrypted);
-}
 
-export async function updateUserTOTPKey(userId: number, key: Uint8Array): Promise<void> {
-  const encrypted = Buffer.from(encrypt(key));
-  await db.update(table.user).set({ totpKey: encrypted }).where(eq(table.user.id, userId));
-}
 
 export async function resetUserRecoveryCode(userId: number): Promise<string> {
   const recoveryCode = generateRandomRecoveryCode();
@@ -111,10 +100,14 @@ export async function getUserFromEmail(email: string): Promise<User | null> {
     email: table.user.email,
     username: table.user.username,
     emailVerified: table.user.emailVerified,
-    registered2FA: table.user.registered2FA,
-    totpKey: table.user.totpKey
+    hasTotpCredential: sql`CASE WHEN ${table.totpCredential.id} IS NOT NULL THEN true ELSE false END`,
+    hasPasskeyCredential: sql`CASE WHEN ${table.passkeyCredential.id} IS NOT NULL THEN true ELSE false END`,
+    hasSecurityKeyCredential: sql`CASE WHEN ${table.securityKeyCredential.id} IS NOT NULL THEN true ELSE false END`,
   })
     .from(table.user)
+    .leftJoin(table.totpCredential, eq(table.user.id, table.totpCredential.userId))
+    .leftJoin(table.passkeyCredential, eq(table.user.id, table.passkeyCredential.userId))
+    .leftJoin(table.securityKeyCredential, eq(table.user.id, table.securityKeyCredential.userId))
     .where(eq(table.user.email, email))
     .limit(1);
 
@@ -126,7 +119,10 @@ export async function getUserFromEmail(email: string): Promise<User | null> {
     email: row[0].email,
     username: row[0].username,
     emailVerified: row[0].emailVerified,
-    registered2FA: row[0].registered2FA !== null,
+    registeredTOTP: row[0].hasTotpCredential as boolean,
+    registeredPasskey: row[0].hasPasskeyCredential as boolean,
+    registeredSecurityKey: row[0].hasSecurityKeyCredential as boolean,
+    registered2FA: false
   };
   return user;
 }
@@ -136,5 +132,8 @@ export interface User {
   email: string;
   username: string;
   emailVerified: boolean;
+  registeredTOTP: boolean;
+  registeredSecurityKey: boolean;
+  registeredPasskey: boolean;
   registered2FA: boolean;
 }

@@ -5,6 +5,8 @@ import * as table from '$lib/server/db/schema';
 import { and, eq } from 'drizzle-orm';
 import { generateRandomRecoveryCode } from './utils';
 
+import type { User } from "./user";
+
 export const totpBucket = new ExpiringTokenBucket<number>(5, 60 * 30);
 export const recoveryCodeBucket = new ExpiringTokenBucket<number>(3, 60 * 60);
 
@@ -22,25 +24,57 @@ export async function resetUser2FAWithRecoveryCode(userId: number, recoveryCode:
 
   const newRecoveryCode = generateRandomRecoveryCode();
   const encryptedNewRecoveryCode = encryptString(newRecoveryCode);
-  // db.execute("UPDATE session SET two_factor_verified = 0 WHERE user_id = ?", [userId]);
-  await db.update(table.session).set({ twoFactorVerified: false }).where(eq(table.session.userId, userId));
   // Compare old recovery code to ensure recovery code wasn't updated.
-  // const result = db.execute("UPDATE user SET recovery_code = ?, totp_key = NULL WHERE id = ? AND recovery_code = ?", [
-  //   encryptedNewRecoveryCode,
-  //   userId,
-  //   encryptedRecoveryCode
-  // ]);
-  // return result.changes > 0;
+
+  try {
+    await db.transaction(async (tx) => {
+      const result = await tx.update(table.user)
+        .set({ recoveryCode: Buffer.from(encryptedNewRecoveryCode) })
+        .where(
+          and(
+            eq(table.user.id, userId),
+            eq(table.user.recoveryCode, encryptedRecoveryCode)
+          )
+        ).returning();
+      console.log('Result is: ', result);
+      if (result.length >= 1) {
+        return false;
+      }
+      await db.update(table.session).set({ twoFactorVerified: false }).where(eq(table.session.userId, userId));
+      await db.delete(table.totpCredential).where(eq(table.totpCredential.userId, userId));
+      await db.delete(table.passkeyCredential).where(eq(table.passkeyCredential.userId, userId));
+      await db.delete(table.securityKeyCredential).where(eq(table.securityKeyCredential.userId, userId));
+    });
+  } catch (e) {
+    throw e;
+  }
+
+  return true;
+}
 
 
-  const result = await db.update(table.user)
-    .set({ recoveryCode: Buffer.from(encryptedNewRecoveryCode), totpKey: null })
-    .where(
-      and(
-        eq(table.user.id, userId),
-        eq(table.user.recoveryCode, row.recovery_code)
-      )
-    ).returning();
-  console.log('Result is: ', result);
-  return result.length > 0;
+export function get2FARedirect(user: User): string {
+  if (user.registeredPasskey) {
+    return "/2fa/passkey";
+  }
+  if (user.registeredSecurityKey) {
+    return "/2fa/security-key";
+  }
+  if (user.registeredTOTP) {
+    return "/2fa/totp";
+  }
+  return "/2fa/setup";
+}
+
+export function getPasswordReset2FARedirect(user: User): string {
+  if (user.registeredPasskey) {
+    return "/reset-password/2fa/passkey";
+  }
+  if (user.registeredSecurityKey) {
+    return "/reset-password/2fa/security-key";
+  }
+  if (user.registeredTOTP) {
+    return "/reset-password/2fa/totp";
+  }
+  return "/2fa/setup";
 }
