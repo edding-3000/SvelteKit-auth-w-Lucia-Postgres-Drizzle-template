@@ -21,7 +21,13 @@ export const actions: Actions = {
 
 async function action(event: RequestEvent) {
 	// TODO: Assumes X-Forwarded-For is always included.
-	const clientIP = event.request.headers.get("X-Forwarded-For");
+	const clientIP = event.request.headers.get("X-Forwarded-For") || "unknown";
+	if (clientIP === "unknown" || !ipBucket.check(clientIP, 1)) {
+		return fail(429, {
+			message: "Too many requests",
+			email: ""
+		});
+	}
 	if (clientIP !== null && !ipBucket.check(clientIP, 1)) {
 		return fail(429, {
 			message: "Too many requests",
