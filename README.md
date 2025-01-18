@@ -13,6 +13,19 @@ I simply followed lucia auth's instructions. I'm definitely not an expert on aut
 
 ### env
 
+Create a .env file. Generate a 128 bit (16 byte) string, base64 encode it, and set it as `ENCRYPTION_KEY`.
+
+```bash
+ENCRYPTION_KEY="L9pmqRJnO1ZJSQ2svbHuBA=="
+```
+
+> You can use OpenSSL to quickly generate a secure key.
+>
+> ```bash
+> openssl rand --base64 16
+> ```
+
+
 - Add an 'ORIGIN' variable to your env file that corresponds to the hostname (for example `"localgost"`).
 - Add an 'ORIGIN_URL' variable to your env file that corresponds to the host url (for example `"http://localhost:5173"`).
 
