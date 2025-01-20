@@ -4,9 +4,6 @@ This is a SvelteKit template project with Lucia auth [Email and password example
 
 It uses [`nodemailer`](https://www.nodemailer.com) for sending emails.
 
-The files within [`routes/(lucia)/signup`](src/routes/(lucia)/signup) have been modified with another password called 'registery password' field, so that only users who know this password can register. The password is stored as an encrypted variable in the env file (possibly not secure). 
-If this is not what you want or need, small parts of the code in [`+page.server.ts`](src/routes/(lucia)/signup/+page.server.ts) and [`+page.svelte`](src/routes/(lucia)/signup/+page.svelte) must be removed.
-
 I simply followed lucia auth's instructions. I'm definitely not an expert on authorization or anything like that. I just thought it might make life easier for some people.
 
 ## TODOs :clipboard:
@@ -31,17 +28,19 @@ ENCRYPTION_KEY="L9pmqRJnO1ZJSQ2svbHuBA=="
 
 ### Setup SMTP for sending mails
 
-Setup your SMTP server in the [`transporter.ts`](src/lib/server/transporter.ts) file. You can use [Gmail](https://support.google.com/a/answer/176600). Insert your gmail as `GMAIL_EMAIL` an ["app password"](https://support.google.com/mail/answer/185833?hl=en&sjid=4253428048818908293-EU) as `GMAIL_PASSWORD` in your env file.
+Setup your SMTP server in the [`transporter.ts`](src/lib/server/transporter.ts) file. You can use [Gmail](https://support.google.com/a/answer/176600). Insert your gmail as `GMAIL_EMAIL` and an ["app password"](https://support.google.com/mail/answer/185833?hl=en&sjid=4253428048818908293-EU) as `GMAIL_PASSWORD` in your env file.
 
 Uncomment and fill in / rewrite the informations for the email-verification process in the [`email-verification.ts`](src/lib/server/email-verification.ts) file and password-reset process in the [`password-reset.ts`](src/lib/server/password-reset.ts) file.
 
-Next you need to setup your postgres database.
+### Setup your postgres database
 
-### Lucia :smiling_imp:
+This project uses Drizzle ORM.
+
+#### Lucia :smiling_imp:
 - Run `npm run db:push` to update your database schema
 - Visit /lucia route to view the demo
 
-### Drizzle :sweat_drops:
+#### Drizzle :sweat_drops:
 - You will need to set DATABASE_URL in your production environment
 - Run `npm run db:push` to update your database schema
 

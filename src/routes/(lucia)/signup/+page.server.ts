@@ -2,7 +2,7 @@ import { fail, redirect } from "@sveltejs/kit";
 import { checkEmailAvailability, verifyEmailInput } from "$lib/server/email";
 import { createUser, verifyUsernameInput } from "$lib/server/user";
 import { RefillingTokenBucket } from "$lib/server/rate-limit";
-import { verifyPasswordHash, verifyPasswordStrength } from "$lib/server/password";
+import { verifyPasswordStrength } from "$lib/server/password";
 import { createSession, generateSessionToken, setSessionTokenCookie } from "$lib/server/session";
 import {
   createEmailVerificationRequest,
@@ -13,7 +13,6 @@ import { get2FARedirect } from "$lib/server/2fa";
 
 import type { SessionFlags } from "$lib/server/session";
 import type { Actions, ServerLoadEvent, RequestEvent } from "@sveltejs/kit";
-import { REGISTERY_PW } from "$env/static/private";
 import { getClientIP } from "$lib/server/getClientIP";
 
 const ipBucket = new RefillingTokenBucket<string>(3, 10);
@@ -39,7 +38,6 @@ export const actions: Actions = {
 };
 
 async function action(event: RequestEvent) {
-  // TODO: Assumes X-Forwarded-For is always included.
   const clientIP = getClientIP(event);
   if (clientIP !== null && !ipBucket.check(clientIP, 1)) {
     return fail(429, {
@@ -54,18 +52,14 @@ async function action(event: RequestEvent) {
   const username = formData.get("username");
   const password = formData.get("password");
   const confirmPassword = formData.get("confirmPassword");
-
-  // Password you need if you want to register
-  const registeryPassword = formData.get('registeryPassword');
-
-  if (typeof email !== "string" || typeof username !== "string" || typeof password !== "string" || typeof confirmPassword !== "string" || typeof registeryPassword !== "string") {
+  if (typeof email !== "string" || typeof username !== "string" || typeof password !== "string" || typeof confirmPassword !== "string") {
     return fail(400, {
       message: "Invalid or missing fields",
       email: "",
       username: ""
     });
   }
-  if (email === "" || password === "" || confirmPassword === "" || username === "" || registeryPassword === "") {
+  if (email === "" || password === "" || confirmPassword === "" || username === "") {
     return fail(400, {
       message: "Please enter your username, email, password and registery password",
       email: "",
@@ -116,26 +110,6 @@ async function action(event: RequestEvent) {
       username
     });
   }
-
-  // Remove from here
-  try {
-    if (!REGISTERY_PW) throw new Error('REGISTERY_PW is not set');
-    const validPassword = await verifyPasswordHash(REGISTERY_PW, registeryPassword as string);
-    if (!validPassword) {
-      return fail(400, {
-        message: 'Incorrect registery password',
-        email: "",
-        username: ""
-      });
-    }
-  } catch (e) {
-    return fail(500, {
-      message: 'An error has occurred while checking registery password.',
-      email: "",
-      username: ""
-    });
-  }
-  // to here
 
   const user = await createUser(email, username, password);
   const emailVerificationRequest = await createEmailVerificationRequest(user.id, user.email);

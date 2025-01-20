@@ -47,14 +47,6 @@
 		autocomplete="new-password"
 		required
 	/><br />
-	<label for="form-signup.registeryPassword">Registery password</label>
-	<input
-		type="password"
-		id="form-signup.registeryPassword"
-		name="registeryPassword"
-		autocomplete="off"
-		required
-	/>
 	<br />
 	<button>Continue</button>
 	<p>{form?.message ?? ''}</p>

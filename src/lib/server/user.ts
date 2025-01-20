@@ -18,12 +18,10 @@ export async function createUser(email: string, username: string, password: stri
     .values({ username, email, passwordHash, recoveryCode: encryptedRecoveryCode })
     .returning({ id: table.user.id });
 
-  // Sicherstellen, dass eine ID zurückgegeben wurde
   if (!row) {
     throw new Error("Unexpected error");
   }
 
-  // Benutzer-Objekt erstellen
   const user: User = {
     id: row.id,
     email,
