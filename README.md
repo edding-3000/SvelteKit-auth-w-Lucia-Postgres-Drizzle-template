@@ -1,4 +1,4 @@
-# SvelteKit with [Lucia auth](https://lucia-auth.com), postgres and [Drizzle](https://orm.drizzle.team) setup as template project in TypeScipt :revolving_hearts:
+# [Lucia auth](https://lucia-auth.com) w/ Sveltekit, postgres and [Drizzle](https://orm.drizzle.team) as template project written in TypeScipt :revolving_hearts:
 
 This is a SvelteKit template project with Lucia auth [Email and password example with 2FA and WebAuthn](https://lucia-auth.com/examples/email-password-2fa-webauthn) already implemented, ready to use and extend.
 
