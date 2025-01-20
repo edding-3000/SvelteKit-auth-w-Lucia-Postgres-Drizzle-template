@@ -1,8 +1,9 @@
-import { redirect } from "@sveltejs/kit";
+import { fail, redirect } from "@sveltejs/kit";
 import { get2FARedirect } from "$lib/server/2fa";
 import { getUserSecurityKeyCredentials } from "$lib/server/webauthn";
+import { deleteSessionTokenCookie, invalidateSession } from "$lib/server/session";
 
-import type { RequestEvent } from "@sveltejs/kit";
+import type { Actions, ServerLoadEvent, RequestEvent } from "@sveltejs/kit";
 
 export async function load(event: RequestEvent) {
 	if (event.locals.session === null || event.locals.user === null) {
@@ -20,9 +21,31 @@ export async function load(event: RequestEvent) {
 	if (!event.locals.user.registeredSecurityKey) {
 		return redirect(302, get2FARedirect(event.locals.user));
 	}
-	const credentials = await getUserSecurityKeyCredentials(event.locals.user.id);
+	const dbCredentials = await getUserSecurityKeyCredentials(event.locals.user.id);
+
+	const credentials = dbCredentials.map((credential) => ({
+		...credential,
+		id: new Uint8Array(credential.id),
+		publicKey: new Uint8Array(credential.publicKey),
+	}));
+
 	return {
 		credentials,
 		user: event.locals.user
 	};
+}
+
+export const actions: Actions = {
+	default: action
+};
+
+async function action(event: RequestEvent) {
+	if (event.locals.session === null) {
+		return fail(401, {
+			message: "Not authenticated"
+		});
+	}
+	await invalidateSession(event.locals.session.id);
+	deleteSessionTokenCookie(event);
+	return redirect(302, "/login");
 }

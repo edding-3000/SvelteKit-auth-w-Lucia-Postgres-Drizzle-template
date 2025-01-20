@@ -31,7 +31,7 @@ ENCRYPTION_KEY="L9pmqRJnO1ZJSQ2svbHuBA=="
 
 ### Setup SMTP for sending mails
 
-Setup your SMTP server in the [`transporter.ts`](src/lib/server/transporter.ts) file. You can use [Gmail](https://support.google.com/a/answer/176600). Insert your gmail as `GMAIL_EMAIL` and password as `GMAIL_PASSWORD` in your env file.
+Setup your SMTP server in the [`transporter.ts`](src/lib/server/transporter.ts) file. You can use [Gmail](https://support.google.com/a/answer/176600). Insert your gmail as `GMAIL_EMAIL` an ["app password"](https://support.google.com/mail/answer/185833?hl=en&sjid=4253428048818908293-EU) as `GMAIL_PASSWORD` in your env file.
 
 Uncomment and fill in / rewrite the informations for the email-verification process in the [`email-verification.ts`](src/lib/server/email-verification.ts) file and password-reset process in the [`password-reset.ts`](src/lib/server/password-reset.ts) file.
 

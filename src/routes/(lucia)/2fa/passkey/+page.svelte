@@ -5,6 +5,7 @@
 
 	import type { PageData } from './$types';
 	import type { WebAuthnUserCredential } from '$lib/server/webauthn';
+	import { enhance } from '$app/forms';
 
 	export let data: PageData;
 
@@ -15,42 +16,52 @@
 <div>
 	<button
 		on:click={async () => {
-			const challenge = await createChallenge();
+			try {
+				const challenge = await createChallenge();
 
-			const credential = await navigator.credentials.get({
-				publicKey: {
-					challenge,
-					userVerification: 'discouraged',
-					allowCredentials: data.credentials.map((credential: WebAuthnUserCredential) => {
-						return {
-							id: credential.id,
-							type: 'public-key'
-						};
-					})
+				const credential = await navigator.credentials.get({
+					publicKey: {
+						challenge,
+						userVerification: 'discouraged',
+						allowCredentials: data.credentials.map((credential: WebAuthnUserCredential) => {
+							return {
+								id: credential.id,
+								type: 'public-key'
+							};
+						})
+					}
+				});
+
+				if (!(credential instanceof PublicKeyCredential)) {
+					throw new Error('Failed to create public key');
 				}
-			});
 
-			if (!(credential instanceof PublicKeyCredential)) {
-				throw new Error('Failed to create public key');
-			}
-			if (!(credential.response instanceof AuthenticatorAssertionResponse)) {
-				throw new Error('Unexpected error');
-			}
+				if (!(credential.response instanceof AuthenticatorAssertionResponse)) {
+					throw new Error('Unexpected error');
+				}
 
-			const response = await fetch('/2fa/passkey', {
-				method: 'POST',
-				body: JSON.stringify({
-					credential_id: encodeBase64(new Uint8Array(credential.rawId)),
-					signature: encodeBase64(new Uint8Array(credential.response.signature)),
-					authenticator_data: encodeBase64(new Uint8Array(credential.response.authenticatorData)),
-					client_data_json: encodeBase64(new Uint8Array(credential.response.clientDataJSON))
-				})
-			});
+				const response = await fetch('/2fa/passkey', {
+					method: 'POST',
+					body: JSON.stringify({
+						credential_id: encodeBase64(new Uint8Array(credential.rawId)),
+						signature: encodeBase64(new Uint8Array(credential.response.signature)),
+						authenticator_data: encodeBase64(new Uint8Array(credential.response.authenticatorData)),
+						client_data_json: encodeBase64(new Uint8Array(credential.response.clientDataJSON))
+					})
+				});
 
-			if (response.ok) {
-				goto('/');
-			} else {
-				message = await response.text();
+				if (response.ok) {
+					goto('/');
+				} else {
+					message = await response.text();
+				}
+			} catch (error) {
+				console.error('Error during passkey authentication:', error);
+				if (error instanceof Error) {
+					message = error.message;
+				} else {
+					message = 'An unknown error occurred';
+				}
 			}
 		}}>Authenticate</button
 	>
@@ -64,3 +75,7 @@
 {#if data.user.registeredSecurityKey}
 	<a href="/2fa/security-key">Use security keys</a>
 {/if}
+
+<form method="post" use:enhance>
+	<button>Back</button>
+</form>

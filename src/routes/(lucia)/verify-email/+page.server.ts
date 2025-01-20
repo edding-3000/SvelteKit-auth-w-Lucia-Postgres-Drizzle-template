@@ -16,7 +16,6 @@ import type { Actions, RequestEvent } from "@sveltejs/kit";
 
 export async function load(event: RequestEvent) {
   if (event.locals.user === null) {
-    console.log('event.locals.user', event.locals.user);
     return redirect(302, "/login");
   }
   let verificationRequest = await getUserEmailVerificationRequestFromRequest(event);

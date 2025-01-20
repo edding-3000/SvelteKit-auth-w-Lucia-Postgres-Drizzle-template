@@ -13,7 +13,7 @@ export const recoveryCodeBucket = new ExpiringTokenBucket<number>(3, 60 * 60);
 export async function resetUser2FAWithRecoveryCode(userId: number, recoveryCode: string): Promise<boolean> {
   // const row = db.queryOne("SELECT recovery_code FROM user WHERE id = ?", [userId]);
   const [row] = await db.select({ recovery_code: table.user.recoveryCode }).from(table.user).where(eq(table.user.id, userId))
-  if (row === null) {
+  if (row === null || row === undefined) {
     return false;
   }
   const encryptedRecoveryCode = row.recovery_code; // HIER WURDE WAS VON COPILOT GEÄNDERT => row.recovery_code.bytes(0);
@@ -29,14 +29,13 @@ export async function resetUser2FAWithRecoveryCode(userId: number, recoveryCode:
   try {
     await db.transaction(async (tx) => {
       const result = await tx.update(table.user)
-        .set({ recoveryCode: Buffer.from(encryptedNewRecoveryCode) })
+        .set({ recoveryCode: encryptedNewRecoveryCode })
         .where(
           and(
             eq(table.user.id, userId),
             eq(table.user.recoveryCode, encryptedRecoveryCode)
           )
         ).returning();
-      console.log('Result is: ', result);
       if (result.length >= 1) {
         return false;
       }

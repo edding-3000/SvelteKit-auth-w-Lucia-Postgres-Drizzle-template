@@ -22,7 +22,7 @@ export async function getUserTOTPKey(userId: number): Promise<Uint8Array | null>
 }
 
 export async function updateUserTOTPKey(userId: number, key: Uint8Array): Promise<void> {
-  const encrypted = Buffer.from(encrypt(key));
+  const encrypted = encrypt(key);
   try {
     await db.transaction(async (tx) => {
       await db.delete(table.totpCredential).where(eq(table.totpCredential.userId, userId));

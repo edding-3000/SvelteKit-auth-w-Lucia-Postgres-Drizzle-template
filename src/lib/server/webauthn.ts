@@ -31,12 +31,11 @@ export async function getUserPasskeyCredentials(userId: number): Promise<WebAuth
     .where(eq(table.passkeyCredential.userId, userId));
 
   const credentials: WebAuthnUserCredential[] = row;
-
   return credentials;
 }
 
 export async function getPasskeyCredential(credentialId: Uint8Array): Promise<WebAuthnUserCredential | null> {
-  const BuffedCredentialId = Buffer.from(credentialId);
+  // const buffedCredentialId = Buffer.from(credentialId);
   const [row] = await db.select(
     {
       id: table.passkeyCredential.id,
@@ -46,8 +45,8 @@ export async function getPasskeyCredential(credentialId: Uint8Array): Promise<We
       publicKey: table.passkeyCredential.publicKey
     })
     .from(table.passkeyCredential)
-    .where(eq(table.passkeyCredential.id, BuffedCredentialId));
-  if (row === null) {
+    .where(eq(table.passkeyCredential.id, credentialId));
+  if (row === null || row === undefined) {
     return null;
   }
   const credential: WebAuthnUserCredential = row;
@@ -55,7 +54,6 @@ export async function getPasskeyCredential(credentialId: Uint8Array): Promise<We
 }
 
 export async function getUserPasskeyCredential(userId: number, credentialId: Uint8Array): Promise<WebAuthnUserCredential | null> {
-  const BuffedCredentialId = Buffer.from(credentialId);
   const [row] = await db.select(
     {
       id: table.passkeyCredential.id,
@@ -67,24 +65,25 @@ export async function getUserPasskeyCredential(userId: number, credentialId: Uin
     .from(table.passkeyCredential)
     .where(
       and(
-        eq(table.passkeyCredential.id, BuffedCredentialId),
+        eq(table.passkeyCredential.id, credentialId),
         eq(table.passkeyCredential.userId, userId)
       )
     );
-  if (row === null) {
+  if (row === null || row === undefined) {
     return null;
   }
+
   const credential: WebAuthnUserCredential = row;
   return credential;
 }
 
 export async function createPasskeyCredential(credential: WebAuthnUserCredential): Promise<void> {
   await db.insert(table.passkeyCredential).values({
-    id: Buffer.from(credential.id),
+    id: credential.id,
     userId: credential.userId,
     name: credential.name,
     algorithm: credential.algorithmId,
-    publicKey: Buffer.from(credential.publicKey)
+    publicKey: credential.publicKey
   })
 }
 
@@ -121,12 +120,12 @@ export async function getUserSecurityKeyCredential(userId: number, credentialId:
     .from(table.securityKeyCredential)
     .where(
       and(
-        eq(table.securityKeyCredential.id, Buffer.from(credentialId)),
+        eq(table.securityKeyCredential.id, credentialId),
         eq(table.securityKeyCredential.userId, userId)
       )
     );
 
-  if (row === null) {
+  if (row === null || row === undefined) {
     return null;
   }
   const credential: WebAuthnUserCredential = {
@@ -141,11 +140,11 @@ export async function getUserSecurityKeyCredential(userId: number, credentialId:
 
 export async function createSecurityKeyCredential(credential: WebAuthnUserCredential): Promise<void> {
   await db.insert(table.securityKeyCredential).values({
-    id: Buffer.from(credential.id),
+    id: credential.id,
     userId: credential.userId,
     name: credential.name,
     algorithm: credential.algorithmId,
-    publicKey: Buffer.from(credential.publicKey)
+    publicKey: credential.publicKey
   })
 
 }
@@ -155,7 +154,7 @@ export async function deleteUserSecurityKeyCredential(userId: number, credential
     .where(
       and(
         eq(table.securityKeyCredential.userId, userId),
-        eq(table.securityKeyCredential.id, Buffer.from(credentialId))
+        eq(table.securityKeyCredential.id, credentialId)
       )
     );
   return result.length > 0;

@@ -1,7 +1,7 @@
 import { totpBucket, getUserTOTPKey } from "$lib/server/totp";
 import { fail, redirect } from "@sveltejs/kit";
 import { verifyTOTP } from "@oslojs/otp";
-import { setSessionAs2FAVerified } from "$lib/server/session";
+import { deleteSessionTokenCookie, invalidateSession, setSessionAs2FAVerified } from "$lib/server/session";
 
 import type { Actions, RequestEvent } from "@sveltejs/kit";
 
@@ -24,10 +24,11 @@ export async function load(event: RequestEvent) {
 }
 
 export const actions: Actions = {
-	default: action
+	authenticator_app: authenticatorAppAction,
+	signout: signoutAction
 };
 
-async function action(event: RequestEvent) {
+async function authenticatorAppAction(event: RequestEvent) {
 	if (event.locals.session === null || event.locals.user === null) {
 		return fail(401, {
 			message: "Not authenticated"
@@ -75,4 +76,15 @@ async function action(event: RequestEvent) {
 	totpBucket.reset(event.locals.user.id);
 	await setSessionAs2FAVerified(event.locals.session.id);
 	return redirect(302, "/");
+}
+
+async function signoutAction(event: RequestEvent) {
+	if (event.locals.session === null) {
+		return fail(401, {
+			message: "Not authenticated"
+		});
+	}
+	await invalidateSession(event.locals.session.id);
+	deleteSessionTokenCookie(event);
+	return redirect(302, "/login");
 }

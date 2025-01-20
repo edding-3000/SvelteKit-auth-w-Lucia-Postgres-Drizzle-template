@@ -98,6 +98,7 @@ async function action(event: RequestEvent) {
 
 	let attestationStatement: AttestationStatement;
 	let authenticatorData: AuthenticatorData;
+
 	try {
 		const attestationObject = parseAttestationObject(attestationObjectBytes);
 		attestationStatement = attestationObject.attestationStatement;
@@ -208,7 +209,7 @@ async function action(event: RequestEvent) {
 
 	// We don't have to worry about race conditions since queries are synchronous
 	const credentials = await getUserPasskeyCredentials(event.locals.user.id);
-	if (credentials.length >= 5) {
+	if (credentials && credentials.length >= 5) {
 		return fail(400, {
 			message: "Too many credentials"
 		});
@@ -217,15 +218,12 @@ async function action(event: RequestEvent) {
 	try {
 		await createPasskeyCredential(credential);
 	} catch (e) {
-		// if (e instanceof SqliteError && e.code === "SQLITE_CONSTRAINT_PRIMARYKEY") {
-		// 	return fail(400, {
-		// 		message: "Invalid data"
-		// 	});
-		// }
 		console.error('Error while creating Passkey credential', e);
-		return fail(500, {
-			message: "Internal error"
+		// if (e instanceof SqliteError && e.code === "SQLITE_CONSTRAINT_PRIMARYKEY") {
+		return fail(400, {
+			message: "Invalid data"
 		});
+		// }
 	}
 
 	if (!event.locals.session.twoFactorVerified) {

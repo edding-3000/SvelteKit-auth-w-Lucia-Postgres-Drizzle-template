@@ -24,7 +24,7 @@ export async function getUserEmailVerificationRequest(userId: number, id: string
         eq(table.emailVerificationRequest.userId, userId)
       )
     );
-  if (row === null) {
+  if (row === null || row === undefined) {
     return row;
   }
   return row;
@@ -49,13 +49,13 @@ export async function deleteUserEmailVerificationRequest(userId: number): Promis
 }
 
 export async function sendVerificationEmail(email: string, code: string): Promise<void> {
-  // const info = await transporter.sendMail({
-  //   from: `"Maddison Foo Koch 👻" <${GMAIL_EMAIL}>`, // sender address
-  //   to: email, // list of receivers
-  //   subject: "Your verification code for Coolection", // Subject line
-  //   text: `Your verification code is ${code}`, // plain text body
-  //   html: `<strong>Your verification code is ${code}</strong>`, // html body
-  // });
+  const info = await transporter.sendMail({
+    from: `"Maddison Foo Koch 👻" <${GMAIL_EMAIL}>`, // sender address
+    to: email, // list of receivers
+    subject: "Your verification code for Coolection", // Subject line
+    text: `Your verification code is ${code}`, // plain text body
+    html: `<strong>Your verification code is ${code}</strong>`, // html body
+  });
 
   // console.log("Message sent: %s", info.messageId);
   console.log(`To ${email}: Your verification code is ${code}`);

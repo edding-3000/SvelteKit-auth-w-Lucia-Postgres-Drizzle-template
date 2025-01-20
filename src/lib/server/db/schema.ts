@@ -2,8 +2,8 @@ import { pgTable, serial, text, integer, timestamp, boolean, customType, uniqueI
 import { SQL, sql } from 'drizzle-orm';
 
 const bytea = customType<{
-	data: Buffer
-	default: false
+	data: Uint8Array,
+	notNull: true
 }>({
 	dataType() {
 		return 'bytea'
@@ -37,7 +37,7 @@ export const emailVerificationRequest = pgTable('email_verification_request', {
 	userId: integer('user_id')
 		.notNull()
 		.references(() => user.id),
-	email: text('email').notNull().references(() => user.email),
+	email: text('email').notNull(),
 	code: text('code').notNull(),
 	expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'date' }).notNull(),
 });
@@ -47,7 +47,7 @@ export const passwordResetSession = pgTable('password_reset_session', {
 	userId: integer('user_id')
 		.notNull()
 		.references(() => user.id),
-	email: text('email').notNull().references(() => user.email),
+	email: text('email').notNull(),
 	code: text('code').notNull(),
 	expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'date' }).notNull(),
 	emailVerified: boolean('email_verified').default(false).notNull(),
@@ -63,7 +63,7 @@ export const totpCredential = pgTable('totp_credential', {
 });
 
 export const passkeyCredential = pgTable('passkey_credential', {
-	id: bytea('id').primaryKey().notNull(),
+	id: bytea('id').notNull(),
 	userId: integer('user_id')
 		.notNull()
 		.references(() => user.id),
@@ -73,7 +73,7 @@ export const passkeyCredential = pgTable('passkey_credential', {
 });
 
 export const securityKeyCredential = pgTable('security_key_credential', {
-	id: bytea('id').primaryKey().notNull(),
+	id: bytea('id').notNull(),
 	userId: integer('user_id')
 		.notNull()
 		.references(() => user.id),

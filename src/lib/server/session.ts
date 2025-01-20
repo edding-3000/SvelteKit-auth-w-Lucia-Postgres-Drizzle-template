@@ -18,7 +18,6 @@ export function generateSessionToken() {
 
 export async function createSession(token: string, userId: number, flags: SessionFlags) {
 	const sessionId = encodeHexLowerCase(sha256(new TextEncoder().encode(token)));
-	console.log("sessionId", sessionId);
 	const session: Session = {
 		id: sessionId,
 		userId,

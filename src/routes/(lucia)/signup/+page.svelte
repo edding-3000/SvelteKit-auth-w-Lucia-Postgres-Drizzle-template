@@ -20,13 +20,14 @@
 		value={form?.username ?? ''}
 		minlength="4"
 		maxlength="31"
+		autocomplete="username"
 	/><br />
 	<label for="form-signup.email">Email</label>
 	<input
 		type="email"
 		id="form-signup.email"
 		name="email"
-		autocomplete="username"
+		autocomplete="email"
 		required
 		value={form?.email ?? ''}
 	/><br />
@@ -38,9 +39,23 @@
 		autocomplete="new-password"
 		required
 	/><br />
-	<label for="form-signup.registeryPassword">Registery assword</label>
-	<input type="password" id="form-signup.registeryPassword" name="registeryPassword" required /><br
+	<label for="form-signup.confirmPassword">Confirm password</label>
+	<input
+		type="password"
+		id="form-signup.password"
+		name="confirmPassword"
+		autocomplete="new-password"
+		required
+	/><br />
+	<label for="form-signup.registeryPassword">Registery password</label>
+	<input
+		type="password"
+		id="form-signup.registeryPassword"
+		name="registeryPassword"
+		autocomplete="off"
+		required
 	/>
+	<br />
 	<button>Continue</button>
 	<p>{form?.message ?? ''}</p>
 </form>

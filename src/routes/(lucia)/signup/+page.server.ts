@@ -14,6 +14,7 @@ import { get2FARedirect } from "$lib/server/2fa";
 import type { SessionFlags } from "$lib/server/session";
 import type { Actions, ServerLoadEvent, RequestEvent } from "@sveltejs/kit";
 import { REGISTERY_PW } from "$env/static/private";
+import { getClientIP } from "$lib/server/getClientIP";
 
 const ipBucket = new RefillingTokenBucket<string>(3, 10);
 
@@ -39,14 +40,8 @@ export const actions: Actions = {
 
 async function action(event: RequestEvent) {
   // TODO: Assumes X-Forwarded-For is always included.
-  const clientIP = event.request.headers.get("X-Forwarded-For") || "unknown";
-  if (clientIP === "unknown" || !ipBucket.check(clientIP, 1)) {
-    return fail(429, {
-      message: "Too many requests",
-      email: "",
-      username: ""
-    });
-  } if (clientIP !== null && !ipBucket.check(clientIP, 1)) {
+  const clientIP = getClientIP(event);
+  if (clientIP !== null && !ipBucket.check(clientIP, 1)) {
     return fail(429, {
       message: "Too many requests",
       email: "",
@@ -58,18 +53,19 @@ async function action(event: RequestEvent) {
   const email = formData.get("email");
   const username = formData.get("username");
   const password = formData.get("password");
+  const confirmPassword = formData.get("confirmPassword");
 
   // Password you need if you want to register
   const registeryPassword = formData.get('registeryPassword');
 
-  if (typeof email !== "string" || typeof username !== "string" || typeof password !== "string") {
+  if (typeof email !== "string" || typeof username !== "string" || typeof password !== "string" || typeof confirmPassword !== "string" || typeof registeryPassword !== "string") {
     return fail(400, {
       message: "Invalid or missing fields",
       email: "",
       username: ""
     });
   }
-  if (email === "" || password === "" || username === "" || registeryPassword === "") {
+  if (email === "" || password === "" || confirmPassword === "" || username === "" || registeryPassword === "") {
     return fail(400, {
       message: "Please enter your username, email, password and registery password",
       email: "",
@@ -106,6 +102,13 @@ async function action(event: RequestEvent) {
       username
     });
   }
+  if (password !== confirmPassword || password.normalize() !== confirmPassword.normalize()) {
+    return fail(400, {
+      message: "Passwords do not match.",
+      email,
+      username
+    });
+  }
   if (clientIP !== null && !ipBucket.consume(clientIP, 1)) {
     return fail(429, {
       message: "Too many requests",
@@ -114,7 +117,7 @@ async function action(event: RequestEvent) {
     });
   }
 
-  // Remove from
+  // Remove from here
   try {
     if (!REGISTERY_PW) throw new Error('REGISTERY_PW is not set');
     const validPassword = await verifyPasswordHash(REGISTERY_PW, registeryPassword as string);
@@ -132,12 +135,10 @@ async function action(event: RequestEvent) {
       username: ""
     });
   }
-  // To
+  // to here
 
   const user = await createUser(email, username, password);
-  console.log('user', user);
   const emailVerificationRequest = await createEmailVerificationRequest(user.id, user.email);
-  console.log('emailVerificationRequest', emailVerificationRequest);
   await sendVerificationEmail(emailVerificationRequest.email, emailVerificationRequest.code);
   setEmailVerificationRequestCookie(event, emailVerificationRequest);
 
@@ -145,9 +146,7 @@ async function action(event: RequestEvent) {
     twoFactorVerified: false
   };
   const sessionToken = generateSessionToken();
-  console.log('sessionToken', sessionToken);
   const session = await createSession(sessionToken, user.id, sessionFlags);
-  console.log('session', session);
   setSessionTokenCookie(event, sessionToken, session.expiresAt);
   throw redirect(302, "/2fa/setup");
 }

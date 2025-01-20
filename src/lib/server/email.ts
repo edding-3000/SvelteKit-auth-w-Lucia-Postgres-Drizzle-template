@@ -8,7 +8,7 @@ export function verifyEmailInput(email: string): boolean {
 
 export async function checkEmailAvailability(email: string): Promise<boolean> {
   const [row] = await db.select({ count: count() }).from(table.user).where(eq(table.user.email, email))
-  if (row === null) {
+  if (row === null || row === undefined) {
     throw new Error();
   }
   return row.count === 0;

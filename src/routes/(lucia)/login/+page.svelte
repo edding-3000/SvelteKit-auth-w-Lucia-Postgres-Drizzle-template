@@ -13,11 +13,11 @@
 
 <h1>Sign in</h1>
 <form method="post" use:enhance>
-	<label for="form-login.email">Email</label>
+	<label for="form-login.email">Email or username</label>
 	<input
-		type="email"
+		type={form?.email?.includes('@') ? 'email' : 'text'}
 		id="form-login.email"
-		name="email"
+		name="email or username"
 		autocomplete="username"
 		required
 		value={form?.email ?? ''}
@@ -37,7 +37,6 @@
 	<button
 		on:click={async () => {
 			const challenge = await createChallenge();
-
 			const credential = await navigator.credentials.get({
 				publicKey: {
 					challenge,

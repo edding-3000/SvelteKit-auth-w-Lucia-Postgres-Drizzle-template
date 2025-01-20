@@ -62,7 +62,7 @@ export async function validatePasswordResetSessionToken(token: string): Promise<
     .leftJoin(table.securityKeyCredential, eq(table.user.id, table.securityKeyCredential.userId))
     .where(eq(table.passwordResetSession.id, sessionId));
 
-  if (row === null) {
+  if (row === null || row === undefined) {
     return { session: null, user: null };
   }
   const session: PasswordResetSession = {

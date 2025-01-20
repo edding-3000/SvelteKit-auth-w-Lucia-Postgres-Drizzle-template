@@ -1,6 +1,6 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { verifyEmailInput } from "$lib/server/email";
-import { getUserFromEmail, getUserPasswordHash } from "$lib/server/user";
+import { getUserFromEmail, getUserFromEmailOrUsername, getUserPasswordHash } from "$lib/server/user";
 import { RefillingTokenBucket, Throttler } from "$lib/server/rate-limit";
 import { verifyPasswordHash } from "$lib/server/password";
 import { createSession, generateSessionToken, setSessionTokenCookie } from "$lib/server/session";
@@ -8,6 +8,7 @@ import { createSession, generateSessionToken, setSessionTokenCookie } from "$lib
 import type { SessionFlags } from "$lib/server/session";
 import type { Actions, ServerLoadEvent, RequestEvent } from "@sveltejs/kit";
 import { get2FARedirect } from "$lib/server/2fa";
+import { getClientIP } from "$lib/server/getClientIP";
 
 export function load(event: ServerLoadEvent) {
 	if (event.locals.session !== null && event.locals.user !== null) {
@@ -34,13 +35,7 @@ export const actions: Actions = {
 
 async function action(event: RequestEvent) {
 	// TODO: Assumes X-Forwarded-For is always included.
-	const clientIP = event.request.headers.get("X-Forwarded-For") || "unknown";
-	if (clientIP === "unknown" || !ipBucket.check(clientIP, 1)) {
-		return fail(429, {
-			message: "Too many requests",
-			email: ""
-		});
-	}
+	const clientIP = getClientIP(event);
 	if (clientIP !== null && !ipBucket.check(clientIP, 1)) {
 		return fail(429, {
 			message: "Too many requests",
@@ -49,33 +44,38 @@ async function action(event: RequestEvent) {
 	}
 
 	const formData = await event.request.formData();
-	const email = formData.get("email");
+	const emailOrUsername = formData.get("email or username");
 	const password = formData.get("password");
-	if (typeof email !== "string" || typeof password !== "string") {
+	if (typeof emailOrUsername !== "string" || typeof password !== "string") {
 		return fail(400, {
 			message: "Invalid or missing fields",
 			email: ""
 		});
 	}
-	if (email === "" || password === "") {
+	if (emailOrUsername === "" || password === "") {
 		return fail(400, {
-			message: "Please enter your email and password.",
-			email
+			message: "Please enter your email or username and password.",
+			email: emailOrUsername
 		});
 	}
-	if (!verifyEmailInput(email)) {
+
+	const isEmail = emailOrUsername.includes("@");
+	if (isEmail && !verifyEmailInput(emailOrUsername)) {
 		return fail(400, {
 			message: "Invalid email",
-			email
+			email: emailOrUsername
 		});
 	}
-	const user = await getUserFromEmail(email);
-	if (user === null) {
-		return fail(400, {
+
+	const user = await getUserFromEmailOrUsername(emailOrUsername);
+
+	if (!user) {
+		return fail(401, {
 			message: "Account does not exist",
-			email
+			email: emailOrUsername
 		});
 	}
+
 	if (clientIP !== null && !ipBucket.consume(clientIP, 1)) {
 		return fail(429, {
 			message: "Too many requests",
@@ -93,7 +93,7 @@ async function action(event: RequestEvent) {
 	if (!validPassword) {
 		return fail(400, {
 			message: "Invalid password",
-			email
+			email: emailOrUsername
 		});
 	}
 	throttler.reset(user.id);

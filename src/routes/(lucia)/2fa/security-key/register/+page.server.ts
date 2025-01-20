@@ -48,6 +48,8 @@ export async function load(event: RequestEvent) {
 	const credentialUserId = new Uint8Array(8);
 	bigEndian.putUint64(credentialUserId, BigInt(event.locals.user.id), 0);
 
+	console.log("server side loaded credentials on registration", credentials);
+
 	return {
 		credentials,
 		credentialUserId,

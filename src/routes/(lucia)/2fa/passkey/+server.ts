@@ -14,10 +14,10 @@ import { setSessionAs2FAVerified } from "$lib/server/session";
 import { decodePKCS1RSAPublicKey, sha256ObjectIdentifier, verifyRSASSAPKCS1v15Signature } from "@oslojs/crypto/rsa";
 import { sha256 } from "@oslojs/crypto/sha2";
 
+import { ORIGIN_URL, ORIGIN } from '$env/static/private'
+
 import type { AuthenticatorData, ClientData } from "@oslojs/webauthn";
 import type { RequestEvent } from "@sveltejs/kit";
-
-import { ORIGIN_URL, ORIGIN } from '$env/static/private'
 
 export async function POST(event: RequestEvent) {
 	if (event.locals.session === null || event.locals.user === null) {

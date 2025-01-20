@@ -11,6 +11,7 @@ import { generateSessionToken } from "$lib/server/session";
 import { fail, redirect } from "@sveltejs/kit";
 
 import type { Actions, RequestEvent } from "@sveltejs/kit";
+import { getClientIP } from "$lib/server/getClientIP";
 
 const ipBucket = new RefillingTokenBucket<string>(3, 60);
 const userBucket = new RefillingTokenBucket<number>(3, 60);
@@ -21,13 +22,7 @@ export const actions: Actions = {
 
 async function action(event: RequestEvent) {
   // TODO: Assumes X-Forwarded-For is always included.
-  const clientIP = event.request.headers.get("X-Forwarded-For") || "unknown";
-  if (clientIP === "unknown" || !ipBucket.check(clientIP, 1)) {
-    return fail(429, {
-      message: "Too many requests",
-      email: ""
-    });
-  }
+  const clientIP = getClientIP(event);
   if (clientIP !== null && !ipBucket.check(clientIP, 1)) {
     return fail(429, {
       message: "Too many requests",

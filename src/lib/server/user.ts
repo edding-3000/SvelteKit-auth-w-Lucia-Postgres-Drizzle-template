@@ -1,5 +1,5 @@
 import * as table from '$lib/server/db/schema';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, or, sql } from 'drizzle-orm';
 import { db } from "./db";
 import { decryptToString, encryptString } from "./encryption";
 import { generateRandomRecoveryCode } from "./utils";
@@ -14,10 +14,8 @@ export async function createUser(email: string, username: string, password: stri
   const recoveryCode = generateRandomRecoveryCode();
   const encryptedRecoveryCode = encryptString(recoveryCode);
 
-  console.log("encryptedRecoveryCode", encryptedRecoveryCode);
-
   const [row] = await db.insert(table.user)
-    .values({ username, email, passwordHash, recoveryCode: Buffer.from(encryptedRecoveryCode) })
+    .values({ username, email, passwordHash, recoveryCode: encryptedRecoveryCode })
     .returning({ id: table.user.id });
 
   // Sicherstellen, dass eine ID zurückgegeben wurde
@@ -89,7 +87,7 @@ export async function getUserRecoverCode(userId: number): Promise<string> {
 
 export async function resetUserRecoveryCode(userId: number): Promise<string> {
   const recoveryCode = generateRandomRecoveryCode();
-  const encrypted = Buffer.from(encryptString(recoveryCode));
+  const encrypted = encryptString(recoveryCode);
   await db.update(table.user).set({ recoveryCode: encrypted }).where(eq(table.user.id, userId));
   return recoveryCode;
 }
@@ -111,6 +109,39 @@ export async function getUserFromEmail(email: string): Promise<User | null> {
     .where(eq(table.user.email, email))
     .limit(1);
 
+  if (!row || row.length === 0) {
+    return null;
+  }
+  const user: User = {
+    id: row[0].id,
+    email: row[0].email,
+    username: row[0].username,
+    emailVerified: row[0].emailVerified,
+    registeredTOTP: row[0].hasTotpCredential as boolean,
+    registeredPasskey: row[0].hasPasskeyCredential as boolean,
+    registeredSecurityKey: row[0].hasSecurityKeyCredential as boolean,
+    registered2FA: false
+  };
+  return user;
+}
+
+export async function getUserFromEmailOrUsername(emailOrUsername: string) {
+  const row = await db.select({
+    id: table.user.id,
+    email: table.user.email,
+    username: table.user.username,
+    emailVerified: table.user.emailVerified,
+    hasTotpCredential: sql`CASE WHEN ${table.totpCredential.id} IS NOT NULL THEN true ELSE false END`,
+    hasPasskeyCredential: sql`CASE WHEN ${table.passkeyCredential.id} IS NOT NULL THEN true ELSE false END`,
+    hasSecurityKeyCredential: sql`CASE WHEN ${table.securityKeyCredential.id} IS NOT NULL THEN true ELSE false END`,
+  })
+    .from(table.user)
+    .leftJoin(table.totpCredential, eq(table.user.id, table.totpCredential.userId))
+    .leftJoin(table.passkeyCredential, eq(table.user.id, table.passkeyCredential.userId))
+    .leftJoin(table.securityKeyCredential, eq(table.user.id, table.securityKeyCredential.userId))
+    .where(
+      or(eq(table.user.email, emailOrUsername), eq(table.user.username, emailOrUsername))
+    );
   if (!row || row.length === 0) {
     return null;
   }

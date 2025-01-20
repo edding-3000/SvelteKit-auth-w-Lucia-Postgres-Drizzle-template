@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { encodeBase64 } from '@oslojs/encoding';
+	import { decodeBase64, encodeBase64 } from '@oslojs/encoding';
 	import { createChallenge } from '$lib/client/webauthn';
 	import { enhance } from '$app/forms';
 
@@ -8,7 +8,6 @@
 
 	export let data: PageData;
 	export let form: ActionData;
-
 	let encodedAttestationObject: string | null = null;
 	let encodedClientDataJSON: string | null = null;
 </script>
