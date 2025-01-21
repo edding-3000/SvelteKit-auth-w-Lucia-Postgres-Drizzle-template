@@ -23,7 +23,14 @@ export async function load(event: RequestEvent) {
 	if (!user.registeredSecurityKey) {
 		return redirect(302, getPasswordReset2FARedirect(user));
 	}
-	const credentials = await getUserSecurityKeyCredentials(user.id);
+	const dbCredentials = await getUserSecurityKeyCredentials(user.id);
+
+	const credentials = dbCredentials.map((credential) => ({
+		...credential,
+		id: new Uint8Array(credential.id),
+		publicKey: new Uint8Array(credential.publicKey),
+	}));
+
 	return {
 		credentials,
 		user

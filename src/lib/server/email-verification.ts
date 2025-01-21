@@ -52,7 +52,7 @@ export async function sendVerificationEmail(email: string, code: string): Promis
   const info = await transporter.sendMail({
     from: `"Maddison Foo Koch 👻" <${GMAIL_EMAIL}>`, // sender address
     to: email, // list of receivers
-    subject: "Your verification code for Coolection", // Subject line
+    subject: "Your verification code for XYZ", // Subject line
     text: `Your verification code is ${code}`, // plain text body
     html: `<strong>Your verification code is ${code}</strong>`, // html body
   });
